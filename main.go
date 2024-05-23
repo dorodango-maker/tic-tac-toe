@@ -79,6 +79,15 @@ func NewGame() *Game {
     }
 }
 
+func (g *Game) resetGame() {
+    g.board = [3][3]int{}
+    g.turn = 1
+    g.winner = 0
+    g.xPositions = []Position{}
+    g.oPositions = []Position{}
+    g.oldestPosition = Position{Row: -1, Col: -1}
+}
+
 func checkWin(board [3][3]int) int {
     // 横のチェック
     for i := 0; i < 3; i++ {
@@ -128,6 +137,10 @@ func (g *Game) addMark(row, col int) {
 
 func (g *Game) Update() error {
     if g.winner != 0 {
+        // 勝者決定後のみリセットボタンのクリックを検出
+        if ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
+            g.resetGame()
+        }
         return nil
     }
 
@@ -153,6 +166,7 @@ func (g *Game) Update() error {
             }
         }
     }
+
     return nil
 }
 
@@ -186,20 +200,19 @@ func (g *Game) Draw(screen *ebiten.Image) {
     // 古い記号を半透明な画像で描画
     if g.turn == 1 && len(g.xPositions) == 3 {
         oldest := g.xPositions[0]
-        // 元の記号を消す
-        g.board[oldest.Row][oldest.Col] = 0
+        g.board[oldest.Row][oldest.Col] = 0 // 元の記号を消す
         drawTransparentMark(screen, oldest.Row, oldest.Col, g.xImgTransparent)
         g.oldestPosition = oldest
     } else if g.turn == 2 && len(g.oPositions) == 3 {
         oldest := g.oPositions[0]
-        g.board[oldest.Row][oldest.Col] = 0
+        g.board[oldest.Row][oldest.Col] = 0 // 元の記号を消す
         drawTransparentMark(screen, oldest.Row, oldest.Col, g.oImgTransparent)
         g.oldestPosition = oldest
     }
 
     // 勝者のメッセージを表示
     if g.winner != 0 {
-        msg := fmt.Sprintf("Player %d wins!", g.winner)
+        msg := fmt.Sprintf("Player %d wins! Right-click to reset.", g.winner)
         ebitenutil.DebugPrint(screen, msg)
     }
 }
