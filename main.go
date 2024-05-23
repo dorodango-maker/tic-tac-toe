@@ -10,12 +10,20 @@ import (
     "github.com/hajimehoshi/ebiten/v2/vector"
 )
 
+type Position struct {
+    Row, Col int
+}
+
 type Game struct {
     board [3][3]int // 0: 空, 1: X, 2: O
-    turn int       // 1: Xのターン, 2: Oのターン
+    turn int        // 1: Xのターン, 2: Oのターン
     xImg *ebiten.Image
     oImg *ebiten.Image
-    winner int // 0: まだ勝者なし, 1: Xの勝利, 2: Oの勝利
+    xImgTransparent *ebiten.Image
+    oImgTransparent *ebiten.Image
+    winner int       // 0: まだ勝者なし, 1: Xの勝利, 2: Oの勝利
+    xPositions []Position
+    oPositions []Position
 }
 
 func loadAndResizeImage(filePath string, width, height int) (*ebiten.Image, error) {
@@ -46,12 +54,26 @@ func NewGame() *Game {
         log.Fatal(err)
     }
 
+    xImgTransparent, err := loadAndResizeImage("assets/x_transparent.png", iconSize, iconSize)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    oImgTransparent, err := loadAndResizeImage("assets/o_transparent.png", iconSize, iconSize)
+    if err != nil {
+        log.Fatal(err)
+    }
+
     return &Game{
         board: [3][3]int{},
         turn: 1,
         xImg: xImg,
         oImg: oImg,
+        xImgTransparent: xImgTransparent,
+        oImgTransparent: oImgTransparent,
         winner: 0,
+        xPositions: []Position{},
+        oPositions: []Position{},
     }
 }
 
@@ -79,6 +101,26 @@ func checkWin(board [3][3]int) int {
     return 0
 }
 
+func (g *Game) addMark(row, col int) {
+    pos := Position{Row: row, Col: col}
+    if g.turn == 1 {
+        if len(g.xPositions) == 3 {
+            oldest := g.xPositions[0]
+            g.board[oldest.Row][oldest.Col] = 0
+            g.xPositions = g.xPositions[1:]
+        }
+        g.xPositions = append(g.xPositions, pos)
+    } else {
+        if len(g.oPositions) == 3 {
+            oldest := g.oPositions[0]
+            g.board[oldest.Row][oldest.Col] = 0
+            g.oPositions = g.oPositions[1:]
+        }
+        g.oPositions = append(g.oPositions, pos)
+    }
+    g.board[row][col] = g.turn
+}
+
 func (g *Game) Update() error {
     if g.winner != 0 {
         return nil
@@ -97,7 +139,7 @@ func (g *Game) Update() error {
         row := y / 100
         col := x / 100
         if row < 3 && col < 3 && g.board[row][col] == 0 {
-            g.board[row][col] = g.turn
+            g.addMark(row, col)
             if g.turn == 1 {
                 g.turn = 2
             } else {
@@ -135,11 +177,30 @@ func (g *Game) Draw(screen *ebiten.Image) {
         }
     }
 
+    // 古い記号を半透明な画像で描画
+    if g.turn == 1 && len(g.xPositions) == 3 {
+        oldest := g.xPositions[0]
+        // 元の記号を消す
+        g.board[oldest.Row][oldest.Col] = 0
+        drawTransparentMark(screen, oldest.Row, oldest.Col, g.xImgTransparent)
+    } else if g.turn == 2 && len(g.oPositions) == 3 {
+        oldest := g.oPositions[0]
+        g.board[oldest.Row][oldest.Col] = 0
+        drawTransparentMark(screen, oldest.Row, oldest.Col, g.oImgTransparent)
+    }
+
     // 勝者のメッセージを表示
     if g.winner != 0 {
         msg := fmt.Sprintf("Player %d wins!", g.winner)
         ebitenutil.DebugPrint(screen, msg)
     }
+}
+
+func drawTransparentMark(screen *ebiten.Image, row, col int, img *ebiten.Image) {
+    const cellSize = 100
+    op := &ebiten.DrawImageOptions{}
+    op.GeoM.Translate(float64(col*cellSize+(cellSize-75)/2), float64(row*cellSize+(cellSize-75)/2))
+    screen.DrawImage(img, op)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
