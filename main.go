@@ -1,6 +1,7 @@
 package main
 
 import (
+    "fmt"
     "image/color"
     "log"
 
@@ -11,9 +12,10 @@ import (
 
 type Game struct {
     board [3][3]int // 0: 空, 1: X, 2: O
-    turn  int       // 1: Xのターン, 2: Oのターン
-    xImg  *ebiten.Image
-    oImg  *ebiten.Image
+    turn int       // 1: Xのターン, 2: Oのターン
+    xImg *ebiten.Image
+    oImg *ebiten.Image
+    winner int // 0: まだ勝者なし, 1: Xの勝利, 2: Oの勝利
 }
 
 func loadAndResizeImage(filePath string, width, height int) (*ebiten.Image, error) {
@@ -46,13 +48,49 @@ func NewGame() *Game {
 
     return &Game{
         board: [3][3]int{},
-        turn:  1,
-        xImg:  xImg,
-        oImg:  oImg,
+        turn: 1,
+        xImg: xImg,
+        oImg: oImg,
+        winner: 0,
     }
 }
 
+func checkWin(board [3][3]int) int {
+    // 横のチェック
+    for i := 0; i < 3; i++ {
+        if board[i][0] != 0 && board[i][0] == board[i][1] && board[i][1] == board[i][2] {
+            return board[i][0]
+        }
+    }
+    // 縦のチェック
+    for i := 0; i < 3; i++ {
+        if board[0][i] != 0 && board[0][i] == board[1][i] && board[1][i] == board[2][i] {
+            return board[0][i]
+        }
+    }
+    // 斜めのチェック
+    if board[0][0] != 0 && board[0][0] == board[1][1] && board[1][1] == board[2][2] {
+        return board[0][0]
+    }
+    if board[0][2] != 0 && board[0][2] == board[1][1] && board[1][1] == board[2][0] {
+        return board[0][2]
+    }
+
+    return 0
+}
+
 func (g *Game) Update() error {
+    if g.winner != 0 {
+        return nil
+    }
+
+    // 勝利判定
+    g.winner = checkWin(g.board)
+    if g.winner != 0 {
+        log.Printf("Player %d wins!", g.winner)
+        return nil
+    }
+
     // クリック位置に応じて、記号を配置
     if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
         x, y := ebiten.CursorPosition()
@@ -95,6 +133,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
                 screen.DrawImage(g.oImg, op)
             }
         }
+    }
+
+    // 勝者のメッセージを表示
+    if g.winner != 0 {
+        msg := fmt.Sprintf("Player %d wins!", g.winner)
+        ebitenutil.DebugPrint(screen, msg)
     }
 }
 
