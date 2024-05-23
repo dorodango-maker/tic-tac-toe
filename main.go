@@ -24,6 +24,7 @@ type Game struct {
     winner int       // 0: まだ勝者なし, 1: Xの勝利, 2: Oの勝利
     xPositions []Position
     oPositions []Position
+    oldestPosition Position
 }
 
 func loadAndResizeImage(filePath string, width, height int) (*ebiten.Image, error) {
@@ -74,6 +75,7 @@ func NewGame() *Game {
         winner: 0,
         xPositions: []Position{},
         oPositions: []Position{},
+        oldestPosition: Position{Row: -1, Col: -1},
     }
 }
 
@@ -108,6 +110,8 @@ func (g *Game) addMark(row, col int) {
             oldest := g.xPositions[0]
             g.board[oldest.Row][oldest.Col] = 0
             g.xPositions = g.xPositions[1:]
+            // 古い位置が消えた場合、最も古い位置を更新
+            g.oldestPosition = pos
         }
         g.xPositions = append(g.xPositions, pos)
     } else {
@@ -115,6 +119,7 @@ func (g *Game) addMark(row, col int) {
             oldest := g.oPositions[0]
             g.board[oldest.Row][oldest.Col] = 0
             g.oPositions = g.oPositions[1:]
+            g.oldestPosition = pos
         }
         g.oPositions = append(g.oPositions, pos)
     }
@@ -138,7 +143,8 @@ func (g *Game) Update() error {
         x, y := ebiten.CursorPosition()
         row := y / 100
         col := x / 100
-        if row < 3 && col < 3 && g.board[row][col] == 0 {
+        // 古い位置には置けないようにする
+        if row < 3 && col < 3 && g.board[row][col] == 0 && !(g.oldestPosition.Row == row && g.oldestPosition.Col == col) {
             g.addMark(row, col)
             if g.turn == 1 {
                 g.turn = 2
@@ -183,10 +189,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
         // 元の記号を消す
         g.board[oldest.Row][oldest.Col] = 0
         drawTransparentMark(screen, oldest.Row, oldest.Col, g.xImgTransparent)
+        g.oldestPosition = oldest
     } else if g.turn == 2 && len(g.oPositions) == 3 {
         oldest := g.oPositions[0]
         g.board[oldest.Row][oldest.Col] = 0
         drawTransparentMark(screen, oldest.Row, oldest.Col, g.oImgTransparent)
+        g.oldestPosition = oldest
     }
 
     // 勝者のメッセージを表示
