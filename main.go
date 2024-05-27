@@ -138,31 +138,38 @@ func (g *Game) updatePositions(positions *[]Position, pos Position) {
 }
 
 func (g *Game) Update() error {
-    if g.winner != Empty {
-        if ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
-            g.resetGame()
-        }
-        return nil
-    }
+    g.handleWinnerState()
+    g.handleGameProgression()
+    return nil
+}
 
+func (g *Game) handleWinnerState() {
+    if g.winner != Empty && ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
+        g.resetGame()
+    }
+}
+
+func (g *Game) handleGameProgression() {
     g.winner = checkWin(g.board)
     if g.winner != Empty {
-        log.Printf("Player %d wins!", g.winner)
-        return nil
+        return
     }
-
     if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-        x, y := ebiten.CursorPosition()
-        row := y / 100
-        col := x / 100
-        pos := Position{Row: row, Col: col}
-        if g.isValidMove(pos) {
-            g.addMark(pos)
-            g.toggleTurn()
-        }
+        g.processPlayerMove()
     }
+}
 
-    return nil
+func (g *Game) processPlayerMove() {
+    pos := g.getCursorPosition()
+    if g.isValidMove(pos) {
+        g.addMark(pos)
+        g.toggleTurn()
+    }
+}
+
+func (g *Game) getCursorPosition() Position {
+    x, y := ebiten.CursorPosition()
+    return Position{Row: y / 100, Col: x / 100}
 }
 
 func (g *Game) isValidMove(pos Position) bool {
