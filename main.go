@@ -17,6 +17,8 @@ const (
     Empty Symbol = iota // 空のマス
     X                   // プレイヤー1のシンボル
     O                   // プレイヤー2のシンボル
+    CellSize = 100      // セルのサイズ
+    IconSize = 75       // アイコンのサイズ
 )
 
 // Position - ボード上の位置を表します
@@ -40,26 +42,24 @@ type Game struct {
 
 // NewGame - ゲームのインスタンスを作成する
 func NewGame() *Game {
-    const iconSize = 75
-
-    xImg, err := loadAndResizeImage("assets/x.png", iconSize, iconSize)
+    xImg, err := loadAndResizeImage("assets/x.png", IconSize, IconSize)
     if err != nil {
-        log.Fatal(err)
+        log.Fatalf("failed to load x.png: %v", err)
     }
 
-    oImg, err := loadAndResizeImage("assets/o.png", iconSize, iconSize)
+    oImg, err := loadAndResizeImage("assets/o.png", IconSize, IconSize)
     if err != nil {
-        log.Fatal(err)
+        log.Fatalf("failed to load o.png: %v", err)
     }
 
-    xImgTransparent, err := loadAndResizeImage("assets/x_transparent.png", iconSize, iconSize)
+    xImgTransparent, err := loadAndResizeImage("assets/x_transparent.png", IconSize, IconSize)
     if err != nil {
-        log.Fatal(err)
+        log.Fatalf("failed to load x_transparent.png: %v", err)
     }
 
-    oImgTransparent, err := loadAndResizeImage("assets/o_transparent.png", iconSize, iconSize)
+    oImgTransparent, err := loadAndResizeImage("assets/o_transparent.png", IconSize, IconSize)
     if err != nil {
-        log.Fatal(err)
+        log.Fatalf("failed to load o_transparent.png: %v", err)
     }
 
     return &Game{
@@ -165,7 +165,7 @@ func (g *Game) processPlayerMove() {
 // getCursorPosition - カーソルの位置を取得する
 func (g *Game) getCursorPosition() Position {
     x, y := ebiten.CursorPosition()
-    return Position{Row: y / 100, Col: x / 100}
+    return Position{Row: y / CellSize, Col: x / CellSize}
 }
 
 // isValidMove - シンボルを追加できるかどうかを判定する
@@ -215,21 +215,18 @@ func (g *Game) Draw(screen *ebiten.Image) {
 // grid - グリッドを描画する
 func (g *Game) grid(screen *ebiten.Image) {
     const gridSize = 3
-    const cellSize = 100
     for i := 1; i < gridSize; i++ {
-        vector.StrokeLine(screen, float32(i*cellSize), 0, float32(i*cellSize), float32(gridSize*cellSize), 2, color.RGBA{255, 255, 255, 255}, false)
-        vector.StrokeLine(screen, 0, float32(i*cellSize), float32(gridSize*cellSize), float32(i*cellSize), 2, color.RGBA{255, 255, 255, 255}, false)
+        vector.StrokeLine(screen, float32(i*CellSize), 0, float32(i*CellSize), float32(gridSize*CellSize), 2, color.RGBA{255, 255, 255, 255}, false)
+        vector.StrokeLine(screen, 0, float32(i*CellSize), float32(gridSize*CellSize), float32(i*CellSize), 2, color.RGBA{255, 255, 255, 255}, false)
     }
 }
 
-// marks - ボード上のシンボルを描画する
+// symbols - ボード上のシンボルを描画する
 func (g *Game) symbols(screen *ebiten.Image) {
-    const cellSize = 100
-    const iconSize = 75
     for row := 0; row < 3; row++ {
         for col := 0; col < 3; col++ {
             op := &ebiten.DrawImageOptions{}
-            op.GeoM.Translate(float64(col*cellSize+(cellSize-iconSize)/2), float64(row*cellSize+(cellSize-iconSize)/2))
+            op.GeoM.Translate(float64(col*CellSize+(CellSize-IconSize)/2), float64(row*CellSize+(CellSize-IconSize)/2))
             if g.board[row][col] == X {
                 screen.DrawImage(g.xImg, op)
             } else if g.board[row][col] == O {
@@ -239,7 +236,7 @@ func (g *Game) symbols(screen *ebiten.Image) {
     }
 }
 
-// oldestMark - 最も古いシンボルを描画する(半透明のシンボルを新たに描画し、最も古いシンボルを削除する)
+// oldestSymbol - 最も古いシンボルを描画する(半透明のシンボルを新たに描画し、最も古いシンボルを削除する)
 func (g *Game) oldestSymbol(screen *ebiten.Image) {
     if (g.turn == X && len(g.xPositions) == 3) || (g.turn == O && len(g.oPositions) == 3) {
         var oldest Position
@@ -252,7 +249,7 @@ func (g *Game) oldestSymbol(screen *ebiten.Image) {
             img = g.oImgTransparent
         }
         g.board[oldest.Row][oldest.Col] = Empty
-        transparentMark(screen, oldest.Row, oldest.Col, img)
+        transparentSymbol(screen, oldest.Row, oldest.Col, img)
         g.oldestPosition = oldest
     }
 }
@@ -265,11 +262,10 @@ func (g *Game) winnerMessage(screen *ebiten.Image) {
     }
 }
 
-// transparentMark - 指定された位置に半透明のシンボルを描画する
-func transparentMark(screen *ebiten.Image, row, col int, img *ebiten.Image) {
-    const cellSize = 100
+// transparentSymbol - 指定された位置に半透明のシンボルを描画する
+func transparentSymbol(screen *ebiten.Image, row, col int, img *ebiten.Image) {
     op := &ebiten.DrawImageOptions{}
-    op.GeoM.Translate(float64(col*cellSize+(cellSize-75)/2), float64(row*cellSize+(cellSize-75)/2))
+    op.GeoM.Translate(float64(col*CellSize+(CellSize-IconSize)/2), float64(row*CellSize+(CellSize-IconSize)/2))
     screen.DrawImage(img, op)
 }
 
