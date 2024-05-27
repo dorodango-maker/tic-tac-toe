@@ -19,16 +19,17 @@ const (
     O                   // プレイヤー2のシンボル
     CellSize = 100      // セルのサイズ
     IconSize = 75       // アイコンのサイズ
+    GridSize = 3        // グリッドのサイズ
 )
 
-// Position - ボード上の位置を表します
+// Position - ボード上の位置を表す構造体
 type Position struct {
     Row, Col int
 }
 
 // Game - ゲームの状態を保持する構造体
 type Game struct {
-    board [3][3]Symbol    // 3x3のボード
+    board [GridSize][GridSize]Symbol // 3x3のボード
     turn Symbol           // 現在のターンのシンボル
     xImg *ebiten.Image    // Xシンボルの画像
     oImg *ebiten.Image    // Oシンボルの画像
@@ -63,7 +64,7 @@ func NewGame() *Game {
     }
 
     return &Game{
-        board: [3][3]Symbol{},
+        board: [GridSize][GridSize]Symbol{},
         turn: X,
         xImg: xImg,
         oImg: oImg,
@@ -107,9 +108,14 @@ func (g *Game) handleWinnerState() {
 
 // resetGame - ゲームをリセットする
 func (g *Game) resetGame() {
-    g.board = [3][3]Symbol{}
+    g.board = [GridSize][GridSize]Symbol{}
     g.turn = X
     g.winner = Empty
+    g.resetPositions()
+}
+
+// resetPositions - シンボルの位置情報をリセットする
+func (g *Game) resetPositions() {
     g.xPositions = []Position{}
     g.oPositions = []Position{}
     g.oldestPosition = Position{Row: -1, Col: -1}
@@ -127,16 +133,16 @@ func (g *Game) handleGameProgression() {
 }
 
 // checkWin - 勝利条件をチェックする
-func checkWin(board [3][3]Symbol) Symbol {
+func checkWin(board [GridSize][GridSize]Symbol) Symbol {
     // 横方向の勝利チェック
-    for i := 0; i < 3; i++ {
+    for i := 0; i < GridSize; i++ {
         if board[i][0] != Empty && board[i][0] == board[i][1] && board[i][1] == board[i][2] {
             return board[i][0]
         }
     }
 
     // 縦方向の勝利チェック
-    for i := 0; i < 3; i++ {
+    for i := 0; i < GridSize; i++ {
         if board[0][i] != Empty && board[0][i] == board[1][i] && board[1][i] == board[2][i] {
             return board[0][i]
         }
@@ -170,22 +176,26 @@ func (g *Game) getCursorPosition() Position {
 
 // isValidMove - シンボルを追加できるかどうかを判定する
 func (g *Game) isValidMove(pos Position) bool {
-    return pos.Row < 3 && pos.Col < 3 && g.board[pos.Row][pos.Col] == Empty && !(g.oldestPosition == pos)
+    return pos.Row < GridSize && pos.Col < GridSize && g.board[pos.Row][pos.Col] == Empty && !(g.oldestPosition == pos)
 }
 
 // addSymbol - ボードにシンボル(X、O)を追加する
 func (g *Game) addSymbol(pos Position) {
-    if g.turn == X {
-        g.updatePositions(&g.xPositions, pos)
-    } else {
-        g.updatePositions(&g.oPositions, pos)
-    }
+    g.updatePositions(g.getCurrentPositions(), pos)
     g.board[pos.Row][pos.Col] = g.turn
+}
+
+// getCurrentPositions - 現在のターンのシンボルの位置を取得する
+func (g *Game) getCurrentPositions() *[]Position {
+    if g.turn == X {
+        return &g.xPositions
+    }
+    return &g.oPositions
 }
 
 // updatePositions - シンボルの位置を更新する
 func (g *Game) updatePositions(positions *[]Position, pos Position) {
-    if len(*positions) == 3 {
+    if len(*positions) == GridSize {
         oldest := (*positions)[0]
         g.board[oldest.Row][oldest.Col] = Empty
         *positions = (*positions)[1:]
@@ -214,17 +224,16 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 // grid - グリッドを描画する
 func (g *Game) grid(screen *ebiten.Image) {
-    const gridSize = 3
-    for i := 1; i < gridSize; i++ {
-        vector.StrokeLine(screen, float32(i*CellSize), 0, float32(i*CellSize), float32(gridSize*CellSize), 2, color.RGBA{255, 255, 255, 255}, false)
-        vector.StrokeLine(screen, 0, float32(i*CellSize), float32(gridSize*CellSize), float32(i*CellSize), 2, color.RGBA{255, 255, 255, 255}, false)
+    for i := 1; i < GridSize; i++ {
+        vector.StrokeLine(screen, float32(i*CellSize), 0, float32(i*CellSize), float32(GridSize*CellSize), 2, color.RGBA{255, 255, 255, 255}, false)
+        vector.StrokeLine(screen, 0, float32(i*CellSize), float32(GridSize*CellSize), float32(i*CellSize), 2, color.RGBA{255, 255, 255, 255}, false)
     }
 }
 
 // symbols - ボード上のシンボルを描画する
 func (g *Game) symbols(screen *ebiten.Image) {
-    for row := 0; row < 3; row++ {
-        for col := 0; col < 3; col++ {
+    for row := 0; row < GridSize; row++ {
+        for col := 0; col < GridSize; col++ {
             op := &ebiten.DrawImageOptions{}
             op.GeoM.Translate(float64(col*CellSize+(CellSize-IconSize)/2), float64(row*CellSize+(CellSize-IconSize)/2))
             if g.board[row][col] == X {
@@ -238,7 +247,7 @@ func (g *Game) symbols(screen *ebiten.Image) {
 
 // oldestSymbol - 最も古いシンボルを描画する(半透明のシンボルを新たに描画し、最も古いシンボルを削除する)
 func (g *Game) oldestSymbol(screen *ebiten.Image) {
-    if (g.turn == X && len(g.xPositions) == 3) || (g.turn == O && len(g.oPositions) == 3) {
+    if (g.turn == X && len(g.xPositions) == GridSize) || (g.turn == O && len(g.oPositions) == GridSize) {
         var oldest Position
         var img *ebiten.Image
         if g.turn == X {
