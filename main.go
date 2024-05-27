@@ -10,31 +10,35 @@ import (
     "github.com/hajimehoshi/ebiten/v2/vector"
 )
 
+// Symbol - ゲームボード上のシンボル
 type Symbol int
 
 const (
-    Empty Symbol = iota
-    X
-    O
+    Empty Symbol = iota // 空のマス
+    X                   // プレイヤー1のシンボル
+    O                   // プレイヤー2のシンボル
 )
 
+// Position - ボード上の位置を表します
 type Position struct {
     Row, Col int
 }
 
+// Game - ゲームの状態を保持する構造体
 type Game struct {
-    board [3][3]Symbol
-    turn Symbol
-    xImg *ebiten.Image
-    oImg *ebiten.Image
-    xImgTransparent *ebiten.Image
-    oImgTransparent *ebiten.Image
-    winner Symbol
-    xPositions []Position
-    oPositions []Position
-    oldestPosition Position
+    board [3][3]Symbol    // 3x3のボード
+    turn Symbol           // 現在のターンのシンボル
+    xImg *ebiten.Image    // Xシンボルの画像
+    oImg *ebiten.Image    // Oシンボルの画像
+    xImgTransparent *ebiten.Image // 半透明のXシンボルの画像
+    oImgTransparent *ebiten.Image // 半透明のOシンボルの画像
+    winner Symbol         // 勝者のシンボル
+    xPositions []Position // Xシンボルの位置
+    oPositions []Position // Oシンボルの位置
+    oldestPosition Position // 最も古いシンボルの位置
 }
 
+// NewGame - ゲームのインスタンスを作成する
 func NewGame() *Game {
     const iconSize = 75
 
@@ -72,6 +76,7 @@ func NewGame() *Game {
     }
 }
 
+// loadAndResizeImage - 画像を読み込み、指定されたサイズにリサイズする
 func loadAndResizeImage(filePath string, width, height int) (*ebiten.Image, error) {
     img, _, err := ebitenutil.NewImageFromFile(filePath)
     if err != nil {
@@ -86,18 +91,21 @@ func loadAndResizeImage(filePath string, width, height int) (*ebiten.Image, erro
     return resizedImg, nil
 }
 
+// Update - ゲームロジックを更新する
 func (g *Game) Update() error {
     g.handleWinnerState()
     g.handleGameProgression()
     return nil
 }
 
+// handleWinnerState - 勝者が決定した後の状態を処理する
 func (g *Game) handleWinnerState() {
     if g.winner != Empty && ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
         g.resetGame()
     }
 }
 
+// resetGame - ゲームをリセットする
 func (g *Game) resetGame() {
     g.board = [3][3]Symbol{}
     g.turn = X
@@ -107,6 +115,7 @@ func (g *Game) resetGame() {
     g.oldestPosition = Position{Row: -1, Col: -1}
 }
 
+// handleGameProgression - ゲームの進行を処理する
 func (g *Game) handleGameProgression() {
     g.winner = checkWin(g.board)
     if g.winner != Empty {
@@ -117,19 +126,23 @@ func (g *Game) handleGameProgression() {
     }
 }
 
+// checkWin - 勝利条件をチェックする
 func checkWin(board [3][3]Symbol) Symbol {
+    // 横方向の勝利チェック
     for i := 0; i < 3; i++ {
         if board[i][0] != Empty && board[i][0] == board[i][1] && board[i][1] == board[i][2] {
             return board[i][0]
         }
     }
 
+    // 縦方向の勝利チェック
     for i := 0; i < 3; i++ {
         if board[0][i] != Empty && board[0][i] == board[1][i] && board[1][i] == board[2][i] {
             return board[0][i]
         }
     }
 
+    // 斜め方向の勝利チェック
     if board[0][0] != Empty && board[0][0] == board[1][1] && board[1][1] == board[2][2] {
         return board[0][0]
     }
@@ -140,24 +153,28 @@ func checkWin(board [3][3]Symbol) Symbol {
     return Empty
 }
 
+// processPlayerMove - プレイヤーの動きを処理する（シンボルを追加してターンを切り替える）
 func (g *Game) processPlayerMove() {
     pos := g.getCursorPosition()
     if g.isValidMove(pos) {
-        g.addMark(pos)
+        g.addSymbol(pos)
         g.toggleTurn()
     }
 }
 
+// getCursorPosition - カーソルの位置を取得する
 func (g *Game) getCursorPosition() Position {
     x, y := ebiten.CursorPosition()
     return Position{Row: y / 100, Col: x / 100}
 }
 
+// isValidMove - シンボルを追加できるかどうかを判定する
 func (g *Game) isValidMove(pos Position) bool {
     return pos.Row < 3 && pos.Col < 3 && g.board[pos.Row][pos.Col] == Empty && !(g.oldestPosition == pos)
 }
 
-func (g *Game) addMark(pos Position) {
+// addSymbol - ボードにシンボル(X、O)を追加する
+func (g *Game) addSymbol(pos Position) {
     if g.turn == X {
         g.updatePositions(&g.xPositions, pos)
     } else {
@@ -166,6 +183,7 @@ func (g *Game) addMark(pos Position) {
     g.board[pos.Row][pos.Col] = g.turn
 }
 
+// updatePositions - シンボルの位置を更新する
 func (g *Game) updatePositions(positions *[]Position, pos Position) {
     if len(*positions) == 3 {
         oldest := (*positions)[0]
@@ -176,6 +194,7 @@ func (g *Game) updatePositions(positions *[]Position, pos Position) {
     *positions = append(*positions, pos)
 }
 
+// toggleTurn - ターンを切り替える
 func (g *Game) toggleTurn() {
     if g.turn == X {
         g.turn = O
@@ -184,14 +203,16 @@ func (g *Game) toggleTurn() {
     }
 }
 
+// Draw - ゲームの描画を行う
 func (g *Game) Draw(screen *ebiten.Image) {
     screen.Fill(color.RGBA{0, 0, 0, 255})
     g.grid(screen)
-    g.marks(screen)
+    g.symbols(screen)
     g.oldestMark(screen)
     g.winnerMessage(screen)
 }
 
+// grid - グリッドを描画する
 func (g *Game) grid(screen *ebiten.Image) {
     const gridSize = 3
     const cellSize = 100
@@ -201,7 +222,8 @@ func (g *Game) grid(screen *ebiten.Image) {
     }
 }
 
-func (g *Game) marks(screen *ebiten.Image) {
+// marks - ボード上のシンボルを描画する
+func (g *Game) symbols(screen *ebiten.Image) {
     const cellSize = 100
     const iconSize = 75
     for row := 0; row < 3; row++ {
@@ -217,6 +239,7 @@ func (g *Game) marks(screen *ebiten.Image) {
     }
 }
 
+// oldestMark - 最も古いシンボルを描画する(半透明のシンボルを新たに描画し、最も古いシンボルを削除する)
 func (g *Game) oldestMark(screen *ebiten.Image) {
     if (g.turn == X && len(g.xPositions) == 3) || (g.turn == O && len(g.oPositions) == 3) {
         var oldest Position
@@ -234,6 +257,7 @@ func (g *Game) oldestMark(screen *ebiten.Image) {
     }
 }
 
+// winnerMessage - 勝者メッセージを描画する
 func (g *Game) winnerMessage(screen *ebiten.Image) {
     if g.winner != Empty {
         msg := fmt.Sprintf("Player %d wins! Right-click to reset.", g.winner)
@@ -241,6 +265,7 @@ func (g *Game) winnerMessage(screen *ebiten.Image) {
     }
 }
 
+// transparentMark - 指定された位置に半透明のシンボルを描画する
 func transparentMark(screen *ebiten.Image, row, col int, img *ebiten.Image) {
     const cellSize = 100
     op := &ebiten.DrawImageOptions{}
@@ -248,10 +273,12 @@ func transparentMark(screen *ebiten.Image, row, col int, img *ebiten.Image) {
     screen.DrawImage(img, op)
 }
 
+// Layout - ウィンドウのレイアウトを設定する
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
     return 300, 300
 }
 
+// main - エントリポイント
 func main() {
     ebiten.SetWindowSize(300, 300)
     ebiten.SetWindowTitle("Tic-Tac-Toe")
