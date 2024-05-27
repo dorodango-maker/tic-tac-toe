@@ -35,20 +35,6 @@ type Game struct {
     oldestPosition Position
 }
 
-func loadAndResizeImage(filePath string, width, height int) (*ebiten.Image, error) {
-    img, _, err := ebitenutil.NewImageFromFile(filePath)
-    if err != nil {
-        return nil, err
-    }
-
-    resizedImg := ebiten.NewImage(width, height)
-    op := &ebiten.DrawImageOptions{}
-    op.GeoM.Scale(float64(width)/float64(img.Bounds().Dx()), float64(height)/float64(img.Bounds().Dy()))
-    resizedImg.DrawImage(img, op)
-
-    return resizedImg, nil
-}
-
 func NewGame() *Game {
     const iconSize = 75
 
@@ -86,6 +72,32 @@ func NewGame() *Game {
     }
 }
 
+func loadAndResizeImage(filePath string, width, height int) (*ebiten.Image, error) {
+    img, _, err := ebitenutil.NewImageFromFile(filePath)
+    if err != nil {
+        return nil, err
+    }
+
+    resizedImg := ebiten.NewImage(width, height)
+    op := &ebiten.DrawImageOptions{}
+    op.GeoM.Scale(float64(width)/float64(img.Bounds().Dx()), float64(height)/float64(img.Bounds().Dy()))
+    resizedImg.DrawImage(img, op)
+
+    return resizedImg, nil
+}
+
+func (g *Game) Update() error {
+    g.handleWinnerState()
+    g.handleGameProgression()
+    return nil
+}
+
+func (g *Game) handleWinnerState() {
+    if g.winner != Empty && ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
+        g.resetGame()
+    }
+}
+
 func (g *Game) resetGame() {
     g.board = [3][3]Symbol{}
     g.turn = X
@@ -93,6 +105,16 @@ func (g *Game) resetGame() {
     g.xPositions = []Position{}
     g.oPositions = []Position{}
     g.oldestPosition = Position{Row: -1, Col: -1}
+}
+
+func (g *Game) handleGameProgression() {
+    g.winner = checkWin(g.board)
+    if g.winner != Empty {
+        return
+    }
+    if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+        g.processPlayerMove()
+    }
 }
 
 func checkWin(board [3][3]Symbol) Symbol {
@@ -118,6 +140,23 @@ func checkWin(board [3][3]Symbol) Symbol {
     return Empty
 }
 
+func (g *Game) processPlayerMove() {
+    pos := g.getCursorPosition()
+    if g.isValidMove(pos) {
+        g.addMark(pos)
+        g.toggleTurn()
+    }
+}
+
+func (g *Game) getCursorPosition() Position {
+    x, y := ebiten.CursorPosition()
+    return Position{Row: y / 100, Col: x / 100}
+}
+
+func (g *Game) isValidMove(pos Position) bool {
+    return pos.Row < 3 && pos.Col < 3 && g.board[pos.Row][pos.Col] == Empty && !(g.oldestPosition == pos)
+}
+
 func (g *Game) addMark(pos Position) {
     if g.turn == X {
         g.updatePositions(&g.xPositions, pos)
@@ -135,45 +174,6 @@ func (g *Game) updatePositions(positions *[]Position, pos Position) {
         g.oldestPosition = pos
     }
     *positions = append(*positions, pos)
-}
-
-func (g *Game) Update() error {
-    g.handleWinnerState()
-    g.handleGameProgression()
-    return nil
-}
-
-func (g *Game) handleWinnerState() {
-    if g.winner != Empty && ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
-        g.resetGame()
-    }
-}
-
-func (g *Game) handleGameProgression() {
-    g.winner = checkWin(g.board)
-    if g.winner != Empty {
-        return
-    }
-    if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-        g.processPlayerMove()
-    }
-}
-
-func (g *Game) processPlayerMove() {
-    pos := g.getCursorPosition()
-    if g.isValidMove(pos) {
-        g.addMark(pos)
-        g.toggleTurn()
-    }
-}
-
-func (g *Game) getCursorPosition() Position {
-    x, y := ebiten.CursorPosition()
-    return Position{Row: y / 100, Col: x / 100}
-}
-
-func (g *Game) isValidMove(pos Position) bool {
-    return pos.Row < 3 && pos.Col < 3 && g.board[pos.Row][pos.Col] == Empty && !(g.oldestPosition == pos)
 }
 
 func (g *Game) toggleTurn() {
