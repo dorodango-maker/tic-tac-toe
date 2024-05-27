@@ -178,17 +178,25 @@ func (g *Game) toggleTurn() {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+    screen.Fill(color.RGBA{0, 0, 0, 255})
+    g.drawGrid(screen)
+    g.drawMarks(screen)
+    g.drawOldestMark(screen)
+    g.drawWinnerMessage(screen)
+}
+
+func (g *Game) drawGrid(screen *ebiten.Image) {
     const gridSize = 3
     const cellSize = 100
-    const iconSize = 75
-
-    screen.Fill(color.RGBA{0, 0, 0, 255})
-
     for i := 1; i < gridSize; i++ {
         vector.StrokeLine(screen, float32(i*cellSize), 0, float32(i*cellSize), float32(gridSize*cellSize), 2, color.RGBA{255, 255, 255, 255}, false)
         vector.StrokeLine(screen, 0, float32(i*cellSize), float32(gridSize*cellSize), float32(i*cellSize), 2, color.RGBA{255, 255, 255, 255}, false)
     }
+}
 
+func (g *Game) drawMarks(screen *ebiten.Image) {
+    const cellSize = 100
+    const iconSize = 75
     for row := 0; row < 3; row++ {
         for col := 0; col < 3; col++ {
             op := &ebiten.DrawImageOptions{}
@@ -199,13 +207,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
                 screen.DrawImage(g.oImg, op)
             }
         }
-    }
-
-    g.drawOldestMark(screen)
-
-    if g.winner != Empty {
-        msg := fmt.Sprintf("Player %d wins! Right-click to reset.", g.winner)
-        ebitenutil.DebugPrint(screen, msg)
     }
 }
 
@@ -223,6 +224,13 @@ func (g *Game) drawOldestMark(screen *ebiten.Image) {
         g.board[oldest.Row][oldest.Col] = Empty
         drawTransparentMark(screen, oldest.Row, oldest.Col, img)
         g.oldestPosition = oldest
+    }
+}
+
+func (g *Game) drawWinnerMessage(screen *ebiten.Image) {
+    if g.winner != Empty {
+        msg := fmt.Sprintf("Player %d wins! Right-click to reset.", g.winner)
+        ebitenutil.DebugPrint(screen, msg)
     }
 }
 
