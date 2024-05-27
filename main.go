@@ -186,13 +186,13 @@ func (g *Game) toggleTurn() {
 
 func (g *Game) Draw(screen *ebiten.Image) {
     screen.Fill(color.RGBA{0, 0, 0, 255})
-    g.drawGrid(screen)
-    g.drawMarks(screen)
-    g.drawOldestMark(screen)
-    g.drawWinnerMessage(screen)
+    g.grid(screen)
+    g.marks(screen)
+    g.oldestMark(screen)
+    g.winnerMessage(screen)
 }
 
-func (g *Game) drawGrid(screen *ebiten.Image) {
+func (g *Game) grid(screen *ebiten.Image) {
     const gridSize = 3
     const cellSize = 100
     for i := 1; i < gridSize; i++ {
@@ -201,7 +201,7 @@ func (g *Game) drawGrid(screen *ebiten.Image) {
     }
 }
 
-func (g *Game) drawMarks(screen *ebiten.Image) {
+func (g *Game) marks(screen *ebiten.Image) {
     const cellSize = 100
     const iconSize = 75
     for row := 0; row < 3; row++ {
@@ -217,7 +217,7 @@ func (g *Game) drawMarks(screen *ebiten.Image) {
     }
 }
 
-func (g *Game) drawOldestMark(screen *ebiten.Image) {
+func (g *Game) oldestMark(screen *ebiten.Image) {
     if (g.turn == X && len(g.xPositions) == 3) || (g.turn == O && len(g.oPositions) == 3) {
         var oldest Position
         var img *ebiten.Image
@@ -229,19 +229,19 @@ func (g *Game) drawOldestMark(screen *ebiten.Image) {
             img = g.oImgTransparent
         }
         g.board[oldest.Row][oldest.Col] = Empty
-        drawTransparentMark(screen, oldest.Row, oldest.Col, img)
+        transparentMark(screen, oldest.Row, oldest.Col, img)
         g.oldestPosition = oldest
     }
 }
 
-func (g *Game) drawWinnerMessage(screen *ebiten.Image) {
+func (g *Game) winnerMessage(screen *ebiten.Image) {
     if g.winner != Empty {
         msg := fmt.Sprintf("Player %d wins! Right-click to reset.", g.winner)
         ebitenutil.DebugPrint(screen, msg)
     }
 }
 
-func drawTransparentMark(screen *ebiten.Image, row, col int, img *ebiten.Image) {
+func transparentMark(screen *ebiten.Image, row, col int, img *ebiten.Image) {
     const cellSize = 100
     op := &ebiten.DrawImageOptions{}
     op.GeoM.Translate(float64(col*cellSize+(cellSize-75)/2), float64(row*cellSize+(cellSize-75)/2))
