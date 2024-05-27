@@ -208,7 +208,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
     screen.Fill(color.RGBA{0, 0, 0, 255})
     g.grid(screen)
     g.symbols(screen)
-    g.oldestMark(screen)
+    g.oldestSymbol(screen)
     g.winnerMessage(screen)
 }
 
@@ -240,7 +240,7 @@ func (g *Game) symbols(screen *ebiten.Image) {
 }
 
 // oldestMark - 最も古いシンボルを描画する(半透明のシンボルを新たに描画し、最も古いシンボルを削除する)
-func (g *Game) oldestMark(screen *ebiten.Image) {
+func (g *Game) oldestSymbol(screen *ebiten.Image) {
     if (g.turn == X && len(g.xPositions) == 3) || (g.turn == O && len(g.oPositions) == 3) {
         var oldest Position
         var img *ebiten.Image
