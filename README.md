@@ -7,7 +7,7 @@ Ebitengineで作成した最初のゲームです。
 
 # 起動方法
 GoとEbitengineがインストールされていない場合は、下記記事参考にインストールしてください。
-
+https://zenn.dev/dorodango_maker/articles/12e67170e4dc72
 
 ```
 $ cd 任意のディレクトリ
