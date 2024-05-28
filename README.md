@@ -1,3 +1,6 @@
+![giphy](https://github.com/dorodango-maker/tic-tac-toe/assets/86306494/8e849b57-27d0-494c-b0e1-0c2c37d99227)
+
+
 # OXゲーム（tic-tac-toe）
 Ebitengineで作成した最初のゲームです。
 現在は2人対戦のみ対応。気が向いたらCPU対戦モード作るかも。
